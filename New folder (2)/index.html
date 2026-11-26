@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canva-Style Web Video Editor</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Real MP4 Muxer via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-badge">V</div>
+      <span>StudioCut</span>
+    </div>
+
+    <div class="top-actions">
+      <button id="btn-clear" class="btn secondary" title="Clear Timeline">Clear Timeline</button>
+      <button id="btn-export-mp4" class="btn primary">Export MP4</button>
+      <button id="btn-export-avi" class="btn secondary-light">Export AVI</button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="workspace">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">Uploads & Elements</div>
+      <div class="upload-buttons">
+        <label class="upload-btn">
+          + Add Video
+          <input type="file" id="upload-video" accept="video/*" hidden />
+        </label>
+        <label class="upload-btn">
+          + Add Image
+          <input type="file" id="upload-image" accept="image/*" hidden />
+        </label>
+        <label class="upload-btn">
+          + Add Audio
+          <input type="file" id="upload-audio" accept="audio/*" hidden />
+        </label>
+        <button id="btn-add-text" class="upload-btn text-add-btn">+ Add Text</button>
+      </div>
+
+      <!-- Clip Effects & Volume Box -->
+      <div class="panel-box">
+        <div class="panel-title">Effects (Selected Clip)</div>
+        <div class="effects-grid">
+          <button class="fx-btn" data-effect="zoom-in">?? Zoom In</button>
+          <button class="fx-btn" data-effect="zoom-out">?? Zoom Out</button>
+          <button class="fx-btn" data-effect="crop">?? Crop</button>
+          <button class="fx-btn" data-effect="typewriter">?? Typewriter</button>
+          <button class="fx-btn" data-effect="word-pop">? Word Pop</button>
+          <button class="fx-btn clear-fx" data-effect="none">? None</button>
+        </div>
+
+        <div class="volume-row">
+          <div class="volume-header">
+            <span>?? Volume</span>
+            <span id="volume-label">100%</span>
+          </div>
+          <input type="range" id="volume-slider" min="0" max="200" value="100" />
+        </div>
+      </div>
+
+      <!-- Text Inspector Box -->
+      <div id="text-inspector" class="panel-box">
+        <div class="panel-title">Text Style (Selected Text Clip)</div>
+        <input type="text" id="text-content-input" class="text-input" placeholder="Enter text here..." />
+
+        <div class="two-col">
+          <div>
+            <label class="mini-label">Font</label>
+            <select id="text-font-select" class="mini-select">
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+              <option value="'Courier New', monospace">Courier</option>
+              <option value="Impact, sans-serif">Impact</option>
+            </select>
+          </div>
+          <div>
+            <label class="mini-label">Size (<span id="text-size-label">54</span>px)</label>
+            <input type="range" id="text-size-slider" min="20" max="140" value="54" />
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <label class="mini-label">Text Color</label>
+            <input type="color" id="text-color-input" value="#ffffff" class="color-picker" />
+          </div>
+          <div>
+            <label class="mini-label">Glow Color</label>
+            <input type="color" id="text-glow-color" value="#8b3dff" class="color-picker" />
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <label class="mini-label">Glow (<span id="text-glow-label">12</span>px)</label>
+            <input type="range" id="text-glow-slider" min="0" max="40" value="12" />
+          </div>
+          <div>
+            <label class="mini-label">Edge (<span id="text-edge-label">3</span>px)</label>
+            <input type="range" id="text-edge-slider" min="0" max="12" value="3" />
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-title">Project Media (Click to add)</div>
+      <div id="media-pool" class="media-pool"></div>
+    </aside>
+
+    <!-- Center Preview Stage -->
+    <main class="stage-area">
+      <div class="canvas-wrapper">
+        <canvas id="preview-canvas" width="1280" height="720"></canvas>
+      </div>
+
+      <!-- Playback Controls -->
+      <div class="transport-bar">
+        <button id="btn-play" class="icon-btn" title="Play / Pause (Space)">? Play</button>
+        <span id="time-display" class="time-display">00:00.0 / 00:15.0</span>
+        <div class="zoom-control">
+          <label for="zoom-slider">Zoom:</label>
+          <input type="range" id="zoom-slider" min="20" max="150" value="60" />
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bottom Multi-Track Timeline (3 Lanes Each for Image, Video, Audio) -->
+  <section class="timeline-panel">
+    <div class="timeline-toolbar">
+      <div class="tool-group">
+        <button id="tool-split" class="tool-btn" title="Split selected clip at playhead">?? Split</button>
+        <button id="tool-copy" class="tool-btn" title="Copy selected clip">?? Copy</button>
+        <button id="tool-paste" class="tool-btn" title="Paste at playhead">?? Paste</button>
+        <button id="tool-duplicate" class="tool-btn" title="Duplicate selected clip">?? Duplicate</button>
+        <button id="tool-delete" class="tool-btn danger" title="Delete selected clip">??? Delete</button>
+      </div>
+      <div class="timeline-hint">
+        Drag clip edges to <b>Trim</b> • Drag across lanes to move • <b>Right-click</b> any clip
+      </div>
+    </div>
+
+    <div id="timeline-scroll" class="timeline-scroll">
+      <div id="timeline-ruler" class="timeline-ruler"></div>
+
+      <!-- Movable Playhead Line -->
+      <div id="playhead" class="playhead" style="left: 120px;">
+        <div class="playhead-handle"></div>
+        <div class="playhead-line"></div>
+      </div>
+
+      <!-- 3 Image / Overlay + Text Tracks -->
+      <div class="track-row" data-track="overlay-1">
+        <div class="track-label">??? Images 1</div>
+        <div class="track-lane" id="lane-overlay-1"></div>
+      </div>
+      <div class="track-row" data-track="overlay-2">
+        <div class="track-label">??? Images 2</div>
+        <div class="track-lane" id="lane-overlay-2"></div>
+      </div>
+      <div class="track-row" data-track="overlay-3">
+        <div class="track-label">??? Images 3</div>
+        <div class="track-lane" id="lane-overlay-3"></div>
+      </div>
+
+      <!-- 3 Video Tracks -->
+      <div class="track-row" data-track="video-1">
+        <div class="track-label">?? Video 1</div>
+        <div class="track-lane" id="lane-video-1"></div>
+      </div>
+      <div class="track-row" data-track="video-2">
+        <div class="track-label">?? Video 2</div>
+        <div class="track-lane" id="lane-video-2"></div>
+      </div>
+      <div class="track-row" data-track="video-3">
+        <div class="track-label">?? Video 3</div>
+        <div class="track-lane" id="lane-video-3"></div>
+      </div>
+
+      <!-- 3 Audio Tracks (Voiceover + BG Music + SFX) -->
+      <div class="track-row" data-track="audio-1">
+        <div class="track-label">?? Audio 1</div>
+        <div class="track-lane" id="lane-audio-1"></div>
+      </div>
+      <div class="track-row" data-track="audio-2">
+        <div class="track-label">?? Audio 2</div>
+        <div class="track-lane" id="lane-audio-2"></div>
+      </div>
+      <div class="track-row" data-track="audio-3">
+        <div class="track-label">?? Audio 3</div>
+        <div class="track-lane" id="lane-audio-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Custom Right-Click Context Menu -->
+  <ul id="context-menu" class="context-menu hidden">
+    <li data-action="split">?? Split at Playhead</li>
+    <li data-action="copy">?? Copy</li>
+    <li data-action="paste">?? Paste</li>
+    <li data-action="duplicate">?? Duplicate</li>
+    <li class="divider"></li>
+    <li class="menu-section-label">Effects</li>
+    <li data-action="fx-zoom-in">?? Zoom In</li>
+    <li data-action="fx-zoom-out">?? Zoom Out</li>
+    <li data-action="fx-crop">?? Crop</li>
+    <li data-action="fx-typewriter">?? Typewriter</li>
+    <li data-action="fx-word-pop">? Word Pop</li>
+    <li data-action="fx-none">? Clear Effect</li>
+    <li class="divider"></li>
+    <li data-action="delete" class="danger-item">??? Delete</li>
+  </ul>
+
+  <!-- Export Progress Modal -->
+  <div id="export-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="export-title">Rendering & Exporting...</h3>
+      <p id="export-status">Preparing canvas and audio tracks...</p>
+      <div class="progress-bar">
+        <div id="export-progress" class="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
